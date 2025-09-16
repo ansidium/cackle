@@ -7,6 +7,8 @@ Stable tag: 4.33
 
 This plugin integrates Cackle Comment System (Google+, Twitter, Facebook, VKontakte, Odnoklassniki and other) right into your website.
 
+API для разработчиков: https://cackle.me/help/widget-api
+
 == Description ==
 [See English version below]
 
@@ -49,7 +51,7 @@ This plugin integrates Cackle Comment System (Google+, Twitter, Facebook, VKonta
 * Модерация комментариев прямо в виджете на вашем сайте
 * Информация о пользователе: имя, ссылка на страницу соц.сети, Email, IP, браузер, ОС, страна, город
 
-Все возможности - http://cackle.ru/comments
+Все возможности - https://cackle.ru/comments
 
 = Возможности данного плагина =
 
@@ -184,6 +186,7 @@ Answer: Most likely you have not installed or curl extention you selected keys w
 
 Question: I have successfully activated the Wordpress plugin, but the comments do not appear on the page. Why?
 Answer: You need to add a function in comment_template single.php of your theme. Example: <? Php comments_template ('', true)?>
+
 
 
 
