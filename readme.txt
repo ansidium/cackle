@@ -4,8 +4,8 @@ Tags: cackle, comments, social, vk, comments integration
 Requires at least: 6.0
 Tested up to: 6.8.2
 Stable tag: 4.40
-License: GPLv2 or later
-License URI: https://www.gnu.org/licenses/gpl-2.0.html
+License: GPLv3
+License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
 == Summary ==
 Легкая интеграция виджетов Cackle в WordPress: комментарии, счетчики и инструменты модерации. Этот репозиторий — поддерживаемый форк оригинального плагина Cackle с исправлениями безопасности и совместимости PHP 8 / WordPress 6.
@@ -19,7 +19,7 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
 == Требования ==
 - WordPress 6.0 или новее;
-- PHP 8.0+ (рекомендуется 8.4.12);
+- PHP 8.0+ (рекомендуется 8.4);
 - активная учетная запись на cackle.me с ключами siteId, accountApiKey и siteApiKey.
 
 == Установка ==
