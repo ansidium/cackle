@@ -1,11 +1,14 @@
 <?php
 class CackleCounter{
     public static function init() {
-
-
         if (is_single() || is_page()){
         }
         else{
+
+            $api_id = get_option('cackle_apiId');
+            if (empty($api_id)) {
+                return;
+            }
 
             //define('ICL_LANGUAGE_CODE','de');
             if (defined('ICL_LANGUAGE_CODE')) {
@@ -68,12 +71,12 @@ class CackleCounter{
 
 
                 cackle_widget = window.cackle_widget || [];
-                cackle_widget.push({widget: 'CommentCount', <?php if(get_option('cackle_counter_rubrics', 1)==0) { ?> no: ' 0', one: ' 1', mult: ' {num}', <?php } ?> id: '<?php echo get_option('cackle_apiId') ?>'<?php if ($lang_for_cackle != null) : ?>, lang: '<?php print_r($lang_for_cackle) ?>'<?php endif;?>});
+                cackle_widget.push({widget: 'CommentCount', <?php if(get_option('cackle_counter_rubrics', 1)==0) { ?> no: ' 0', one: ' 1', mult: ' {num}', <?php } ?> id: <?php echo wp_json_encode($api_id); ?><?php if ($lang_for_cackle != null) : ?>, lang: <?php echo wp_json_encode($lang_for_cackle); ?><?php endif;?>});
                 (function() {
                     var mc = document.createElement('script');
                     mc.type = 'text/javascript';
                     mc.async = true;
-                    mc.src = ('https:' == document.location.protocol ? 'https' : 'http') + '://cackle.me/widget.js';
+                    mc.src = 'https://cackle.me/widget.js';
                     var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(mc, s.nextSibling);
                 })();
                 //]]>

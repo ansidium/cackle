@@ -53,8 +53,8 @@
 
 </style>
 <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.15/angular.min.js"></script>
-<script src="//ajax.googleapis.com/ajax/libs/angularjs/1.3.15/angular-messages.js"></script>
-<script src="//ajax.googleapis.com/ajax/libs/angularjs/1.3.15/angular-sanitize.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.15/angular-messages.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.15/angular-sanitize.js"></script>
 
 <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.15/angular-animate.min.js"></script>
 <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.15/angular-aria.min.js"></script>
@@ -132,42 +132,40 @@ wp_localize_script('dashboard_script6', 'cackle_locale', array(
 
 ));
 
-$settings[] = Array(
+$settings = array(
     'siteId' => get_option('cackle_apiId', ''),
     'siteApiKey' => get_option('cackle_siteApiKey', ''),
     'accountApiKey' => get_option('cackle_accountApiKey', ''),
-    'sso' => (get_option('cackle_sso', '') == 1) ? true : false,
-    'sync' => (get_option('cackle_sync', '') == 1) ? true : false,
-    'counter' => (get_option('cackle_counter', '') == 1) ? true : false,
-    'counter_rubrics' => (get_option('cackle_counter_rubrics', 1) == 1) ? true : false,
+    'sso' => (int) get_option('cackle_sso', 0) === 1,
+    'sync' => (int) get_option('cackle_sync', 0) === 1,
+    'counter' => (int) get_option('cackle_counter', 0) === 1,
+    'counter_rubrics' => (int) get_option('cackle_counter_rubrics', 1) === 1,
     'manual_sync' => get_option('cackle_manual_sync'),
     'manual_export' => get_option('cackle_manual_export'),
-    'curl_exist_error' => !function_exists('curl_version') ? true : false,
-    'curl_openbase_error' => (ini_get('open_basedir') != '') ? true : false,
-    'curl_safemode_error' => (ini_get('safe_mode') == true) ? true : false,
-    'php_error' => (version_compare(PHP_VERSION, '5.3.0', '<=')) ? true : false
-
-);
-$settings = json_encode($settings);
-
-$status[] = Array(
-    __('Paid white label option', 'cackle') => get_option("cackle_whitelabel", ''),
-    __('Cackle widget language', 'cackle') => get_option("cackle_lang", ''),
-    __('Paid Single Sign On option', 'cackle') => get_option("cackle_sso", ''),
-    __('Plugin activated', 'cackle') => get_option('cackle_correctKey', '')
+    'curl_exist_error' => false,
+    'curl_openbase_error' => false,
+    'curl_safemode_error' => false,
+    'php_error' => version_compare(PHP_VERSION, '7.4.0', '<'),
 );
 
-$status = json_encode($status);
+$status = array(
+    __('Paid white label option', 'cackle') => (int) get_option('cackle_whitelabel', 0) === 1,
+    __('Cackle widget language', 'cackle') => get_option('cackle_lang', ''),
+    __('Paid Single Sign On option', 'cackle') => (int) get_option('cackle_sso', 0) === 1,
+    __('Plugin activated', 'cackle') => (int) get_option('cackle_correctKey', 0) === 1,
+);
+
+wp_localize_script(
+    'dashboard_script6',
+    'cackle_admin',
+    array(
+        'settings' => $settings,
+        'status' => $status,
+        'url' => admin_url('admin-ajax.php'),
+        'nonce' => wp_create_nonce('cackle_request'),
+    )
+);
 ?>
-
-<script type="application/javascript">
-    cackle_admin = {};
-    cackle_admin.settings = JSON.parse('<?php echo($settings)?>')[0];
-    cackle_admin.url = '<?php print_r(admin_url('index.php')) ?>';
-    cackle_admin.status = JSON.parse('<?php echo($status)?>')[0];
-
-
-</script>
 <div ng-app="cackle-admin.Angular">
     <div ng-controller="settings.ctrl">
         <div ng-include src="'main.html'"></div>
@@ -369,5 +367,3 @@ $status = json_encode($status);
         </div>
     </script>
 </div>
-
-

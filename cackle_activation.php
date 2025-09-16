@@ -1,7 +1,22 @@
 <?php
 class CackleActivation{
     public static function check($activation_fields){
-        $k_validate = new CackleApi();
+        $defaults = array(
+            'siteId' => '',
+            'siteApiKey' => '',
+            'accountApiKey' => '',
+            'sso' => false,
+            'counter' => false,
+            'counter_rubrics' => true,
+            'sync' => false,
+        );
+        $activation_fields = wp_parse_args($activation_fields, $defaults);
+
+        $activation_fields['siteId'] = sanitize_text_field($activation_fields['siteId']);
+        $activation_fields['siteApiKey'] = sanitize_text_field($activation_fields['siteApiKey']);
+        $activation_fields['accountApiKey'] = sanitize_text_field($activation_fields['accountApiKey']);
+
+        $k_validate = new CackleAPI();
         $k_req = $k_validate->key_validate(
             $activation_fields["siteId"],
             $activation_fields["siteApiKey"],

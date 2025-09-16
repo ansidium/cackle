@@ -257,13 +257,17 @@ class Sync
             }
             $comment_author_url = isset($comment['anonym']['www']) ? $comment['anonym']['www'] : "";
         }
+        $created_timestamp = (int) round($comment['created'] / 1000);
+        $created_gmt = gmdate('Y-m-d H:i:s', $created_timestamp);
+        $created_local = get_date_from_gmt($created_gmt);
+
         $commentdata = array(
             'comment_post_ID' => $postid,
             'comment_author' => $comment_author,
             'comment_karma' => $comment['rating'],
             'comment_author_email' => $comment_author_email,
-            'comment_date' => strftime("%Y-%m-%d %H:%M:%S", $comment['created'] / 1000 + (get_option('gmt_offset') * 3600)),
-            'comment_date_gmt' => strftime("%Y-%m-%d %H:%M:%S", $comment['created'] / 1000 + (get_option('gmt_offset') * 3600)),
+            'comment_date' => $created_local,
+            'comment_date_gmt' => $created_gmt,
             'comment_author_url' => $comment_author_url,
             'comment_author_IP' => $comment['ip'],
             'comment_content' => apply_filters('pre_comment_content', $comment['message']),

@@ -22,9 +22,9 @@ class CackleAPI
         $this->accountApiKey = $accountApiKey = get_option('cackle_accountApiKey');
         $this->siteApiKey = $siteApiKey = get_option('cackle_siteApiKey');
         $this->cackle_last_modified = $this->cackle_get_param('cackle_last_modified', 0);
-        $this->get_url = "http://cackle.me/api/3.0/comment/list.json?id=$siteId&accountApiKey=$accountApiKey&siteApiKey=$siteApiKey";
-        $this->get_url2 = "http://cackle.me/api/2.0/site/info.json?id=$siteId&accountApiKey=$accountApiKey&siteApiKey=$siteApiKey";
-        $this->update_url = "http://cackle.me/api/wp115/setup?accountApiKey=$accountApiKey&siteApiKey=$siteApiKey";
+        $this->get_url = "https://cackle.me/api/3.0/comment/list.json?id=$siteId&accountApiKey=$accountApiKey&siteApiKey=$siteApiKey";
+        $this->get_url2 = "https://cackle.me/api/2.0/site/info.json?id=$siteId&accountApiKey=$accountApiKey&siteApiKey=$siteApiKey";
+        $this->update_url = "https://cackle.me/api/wp115/setup?accountApiKey=$accountApiKey&siteApiKey=$siteApiKey";
         $this->last_error = null;
     }
 
@@ -55,21 +55,31 @@ class CackleAPI
             $host = $this->get_url . "&modified=" . $cackle_last . "&page=" . $cackle_page . "&size=100&chan=" . $post_id;
         }
 
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $host);
-        curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.8.1.6) Gecko/20070725 Firefox/2.0.0.6");
-        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 0);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-        curl_setopt($ch, CURLOPT_ENCODING, "gzip, deflate");
-        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-                'Content-type: application/x-www-form-urlencoded; charset=utf-8',
+        $response = wp_remote_get(
+            $host,
+            array(
+                'timeout' => 5,
+                'redirection' => 0,
+                'headers' => array(
+                    'User-Agent' => 'WordPress/' . get_bloginfo('version') . '; ' . home_url(),
+                    'Accept-Encoding' => 'gzip, deflate',
+                    'Content-type' => 'application/x-www-form-urlencoded; charset=utf-8',
+                ),
             )
         );
 
-        $result = curl_exec($ch);
-        curl_close($ch);
-        return $result;
+        if (is_wp_error($response)) {
+            $this->last_error = $response->get_error_message();
+            return null;
+        }
+
+        $status_code = wp_remote_retrieve_response_code($response);
+        if ($status_code >= 400) {
+            $this->last_error = 'HTTP ' . $status_code;
+            return null;
+        }
+
+        return wp_remote_retrieve_body($response);
     }
 
     function get_last_comment_by_channel($channel, $default)
@@ -134,94 +144,141 @@ class CackleAPI
 
     function update_comments($update_request)
     {
-        $http = new WP_Http();
         $blog_url = get_bloginfo('wpurl');
-        $update_response = $http->request(
+        $response = wp_remote_post(
             $this->update_url,
             array(
-                'method' => 'POST',
-                'headers' => array("Content-type" => "application/x-www-form-urlencoded"),
-                'body' => $update_request
+                'timeout' => 5,
+                'headers' => array(
+                    'Content-type' => 'application/x-www-form-urlencoded',
+                    'Referer' => $blog_url,
+                ),
+                'body' => $update_request,
             )
         );
+
+        if (is_wp_error($response)) {
+            $this->last_error = $response->get_error_message();
+            return;
+        }
+
+        $status_code = wp_remote_retrieve_response_code($response);
+        if ($status_code >= 400) {
+            $this->last_error = 'HTTP ' . $status_code;
+        }
     }
 
     function key_validate($api, $site, $account)
     {
-        $key_url = "http://cackle.me/api/2.0/site/info.json?id=$api&accountApiKey=$account&siteApiKey=$site";
-        $http = new WP_Http();
-
-        $blog_url = get_bloginfo('wpurl');
-        $key_response = $http->request(
+        $key_url = "https://cackle.me/api/2.0/site/info.json?id=$api&accountApiKey=$account&siteApiKey=$site";
+        $response = wp_remote_get(
             $key_url,
             array(
-                'headers' => array("referer" => $blog_url)
+                'timeout' => 5,
+                'headers' => array('Referer' => get_bloginfo('wpurl')),
             )
         );
-        return isset($key_response["body"]) ? $key_response["body"] : NULL;
+
+        if (is_wp_error($response)) {
+            $this->last_error = $response->get_error_message();
+            return null;
+        }
+
+        $status_code = wp_remote_retrieve_response_code($response);
+        if ($status_code >= 400) {
+            $this->last_error = 'HTTP ' . $status_code;
+            return null;
+        }
+
+        return wp_remote_retrieve_body($response);
     }
 
     function get_all_channels($size,$page,$modified=0){
         $siteId = $this->siteId;
         $accountApiKey = $this->accountApiKey;
         $siteApiKey = $this->siteApiKey;
-        $url_base = "http://cackle.me/api/3.0/comment/chan/list.json?id=$siteId&siteApiKey=$siteApiKey&accountApiKey=$accountApiKey&size=$size&page=$page";
+        $url_base = "https://cackle.me/api/3.0/comment/chan/list.json?id=$siteId&siteApiKey=$siteApiKey&accountApiKey=$accountApiKey&size=$size&page=$page";
         if($modified){
             $url = $url_base . "&gtModify=$modified";
         }
         else{
             $url = $url_base;
         }
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.8.1.6) Gecko/20070725 Firefox/2.0.0.6");
-        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 0);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-        curl_setopt($ch, CURLOPT_ENCODING, "gzip, deflate");
-        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-                'Content-type: application/x-www-form-urlencoded; charset=utf-8',
+
+        $response = wp_remote_get(
+            $url,
+            array(
+                'timeout' => 5,
+                'redirection' => 0,
+                'headers' => array(
+                    'User-Agent' => 'WordPress/' . get_bloginfo('version') . '; ' . home_url(),
+                    'Accept-Encoding' => 'gzip, deflate',
+                    'Content-type' => 'application/x-www-form-urlencoded; charset=utf-8',
+                ),
             )
         );
-        $result = curl_exec($ch);
-        curl_close($ch);
-        return $result;
+
+        if (is_wp_error($response)) {
+            $this->last_error = $response->get_error_message();
+            return null;
+        }
+
+        $status_code = wp_remote_retrieve_response_code($response);
+        if ($status_code >= 400) {
+            $this->last_error = 'HTTP ' . $status_code;
+            return null;
+        }
+
+        return wp_remote_retrieve_body($response);
     }
 
     function import_wordpress_comments($comments, $post_id, $eof = true){
+        $permalink = wp_get_shortlink($post_id->ID);
+        if (!$permalink) {
+            $permalink = get_permalink($post_id->ID);
+        }
+
         $data = array(
             'chan' => $post_id->ID,
-            'url' => urlencode(wp_get_shortlink($post_id->ID)),
+            'url' => rawurlencode((string) $permalink),
             'title' => $post_id->post_title,
             'comments' => $comments);
-        $postfields = json_encode($data);
+        $postfields = wp_json_encode($data);
         $params = array(
             'id' => $this->siteId,
             'accountApiKey' => $this->accountApiKey,
             'siteApiKey' => $this->siteApiKey
         );
-        $curl = curl_init('http://cackle.me/api/3.0/comment/post.json?'.http_build_query($params));
-        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($curl, CURLOPT_POST, true);
-        curl_setopt($curl, CURLINFO_HEADER_OUT, true);
-        curl_setopt($curl, CURLOPT_FOLLOWLOCATION, 0);
-        curl_setopt($curl, CURLOPT_POSTFIELDS, $postfields);
-        curl_setopt($curl, CURLOPT_HTTPHEADER, array(
-                'Content-Type: application/json',
-                'Content-Length: ' . strlen($postfields))
+
+        $response = wp_remote_post(
+            'https://cackle.me/api/3.0/comment/post.json?' . http_build_query($params),
+            array(
+                'timeout' => 5,
+                'body' => $postfields,
+                'headers' => array(
+                    'Content-Type' => 'application/json',
+                ),
+            )
         );
-        $response = curl_exec($curl);
-        if(curl_errno($curl)){
-            $result = 'Ошибка curl: ' . curl_error($curl);
-            $response = compact('result');
-            header('Content-type: text/javascript');
+
+        if (is_wp_error($response)){
+            $this->last_error = $response->get_error_message();
             $arr = array();
             $arr['responseApi']['status']= 'fail';
             $arr['responseApi']['error']='Cackle not responded';
-            return json_encode($arr);
+            return wp_json_encode($arr);
         }
-        curl_close($curl);
-        return $response;
+
+        $status_code = wp_remote_retrieve_response_code($response);
+        if ($status_code >= 400) {
+            $this->last_error = 'HTTP ' . $status_code;
+            $arr = array();
+            $arr['responseApi']['status']= 'fail';
+            $arr['responseApi']['error']='Cackle not responded';
+            return wp_json_encode($arr);
+        }
+
+        return wp_remote_retrieve_body($response);
     }
 
     function get_last_error(){

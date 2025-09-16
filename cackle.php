@@ -1,103 +1,121 @@
 <?php
-/*
-Plugin Name: Cackle
-Plugin URI: http://cackle.me
-Description: This plugin allows your website's audience communicate through social networks like Facebook, Vkontakte, Twitter, e.t.c.
-Version: 4.33
-Author: Cackle
-Author URI: http://cackle.me
-Text Domain: cackle
-Domain Path: /locales
-*/
+/**
+ * Plugin Name: Cackle
+ * Plugin URI: https://cackle.me
+ * Description: This plugin allows your website's audience communicate through social networks like Facebook, Vkontakte, Twitter, and other providers.
+ * Version: 4.40
+ * Author: Cackle
+ * Author URI: https://cackle.me
+ * Text Domain: cackle
+ * Domain Path: /languages
+ */
 
-define('CACKLE_VERSION', '4.28');
-require_once(dirname(__FILE__) . '/cackle_api.php');
-require_once(dirname(__FILE__) . '/sync.php');
-require_once(dirname(__FILE__) . '/channel.php');
-require_once(dirname(__FILE__) . '/monitor.php');
+if (!defined('ABSPATH')) {
+    exit; // Prevent direct access when running outside of WordPress.
+}
+
+const CACKLE_VERSION = '4.40';
+
+require_once __DIR__ . '/cackle_api.php';
+require_once __DIR__ . '/sync.php';
+require_once __DIR__ . '/channel.php';
+require_once __DIR__ . '/monitor.php';
+require_once __DIR__ . '/sync_handler.php';
+require_once __DIR__ . '/cackle_activate.php';
+
+$cackle_api = new CackleAPI();
+
 function cackle_manage() {
-    include_once (dirname(__FILE__) . '/manage.php');
+    include __DIR__ . '/manage.php';
 }
 
 function cackle_admin() {
-    include_once (dirname(__FILE__) . '/cackle_admin.php');
+    include __DIR__ . '/cackle_admin.php';
 }
 
-$cackle_api = new CackleAPI();
-require_once(dirname(__FILE__) . '/sync_handler.php');
-
-class cackle {
-
-    function __construct() {
-        add_filter('comments_template', array($this, 'comments_template'),1000);
-        add_filter('comments_number', array($this, 'comments_text'));
-        add_action('admin_menu', array($this, 'cackle_add_pages'), 1);
-        add_action('admin_menu', array($this, 'cackle_add_pages2'), 1);
-
+class Cackle_Plugin {
+    public function __construct() {
+        add_filter('comments_template', array($this, 'override_comments_template'), 1000);
+        add_filter('comments_number', array($this, 'filter_comment_number'));
+        add_action('admin_menu', array($this, 'register_moderation_menu'), 1);
+        add_action('admin_menu', array($this, 'register_settings_menu'), 1);
     }
 
-    function cackle_add_pages() {
+    public function register_moderation_menu() {
         global $submenu;
-        unset($submenu["edit-comments.php"][0]);
-        add_submenu_page('edit-comments.php', 'Cackle', __('Cackle moderate', 'cackle'), 'moderate_comments', 'cackle', 'cackle_manage');
-        $submenu["edit-comments.php"][0]=$submenu["edit-comments.php"][1];
-        unset($submenu["edit-comments.php"][1]);
+        unset($submenu['edit-comments.php'][0]);
+        add_submenu_page(
+            'edit-comments.php',
+            'Cackle',
+            __('Cackle moderate', 'cackle'),
+            'moderate_comments',
+            'cackle',
+            'cackle_manage'
+        );
+        $submenu['edit-comments.php'][0] = $submenu['edit-comments.php'][1];
+        unset($submenu['edit-comments.php'][1]);
     }
-    function cackle_add_pages2() {
-        add_submenu_page('edit-comments.php', 'Cackle settings', __('Cackle settings', 'cackle'), 'moderate_comments', 'cackle_settings', 'cackle_admin');
+
+    public function register_settings_menu() {
+        add_submenu_page(
+            'edit-comments.php',
+            'Cackle settings',
+            __('Cackle settings', 'cackle'),
+            'moderate_comments',
+            'cackle_settings',
+            'cackle_admin'
+        );
     }
-    function comments_text($comment_text) {
+
+    public function filter_comment_number($comment_text) {
         global $post;
-        return '<span class="cackle-postid" id="c' . htmlspecialchars($this->identifier_for_post($post)) . '">' . $comment_text . '</span>';
+        $post_identifier = $this->identifier_for_post($post);
+
+        return sprintf(
+            '<span class="cackle-postid" id="c%s">%s</span>',
+            esc_attr($post_identifier),
+            esc_html($comment_text)
+        );
     }
 
-    function identifier_for_post($post) {
-        return $post->ID;
+    public function identifier_for_post($post) {
+        return ($post instanceof WP_Post) ? $post->ID : 0;
     }
 
-    function comments_template() {
-        global $wpdb;
-        $this->sync_handler(); //uncomment for debug without 5min delay
-        if (cackle_enabled()) {
-            return dirname(__FILE__) . '/comment-template.php';
+    public function override_comments_template() {
+        if (!cackle_enabled()) {
+            return null;
         }
-    }
-
-    function sync_handler() {
 
         SyncHandler::init();
+
+        return __DIR__ . '/comment-template.php';
     }
-
 }
 
-//Init cackle module
-function cackle_init() {
-    $a = new cackle;
+function cackle_bootstrap() {
+    new Cackle_Plugin();
 }
-add_action('init', 'cackle_init');
+add_action('plugins_loaded', 'cackle_bootstrap');
 
 function lang_init() {
-    $plugin_dir = basename(dirname(__FILE__));
-    load_plugin_textdomain( 'cackle', false, basename( dirname( __FILE__ ) ) . '/languages' );
+    load_plugin_textdomain('cackle', false, basename(__DIR__) . '/languages');
 }
 add_action('plugins_loaded', 'lang_init');
-
-//Init adding counter widget
 function cackle_output_footer_comment_js() {
-    require_once(dirname(__FILE__) . '/counter.php');
+    if (!cackle_enabled()) {
+        return;
+    }
+
+    require_once __DIR__ . '/counter.php';
     CackleCounter::init();
 }
 add_action('wp_footer', 'cackle_output_footer_comment_js');
 
-//Init request handler
 function cackle_request_handler() {
-    global $wpdb;
-    if (!empty($_POST)&& !isset($_POST["interval"])) {
-        require_once(dirname(__FILE__) . '/request_handler.php');
-    }
+    require_once __DIR__ . '/request_handler.php';
+    cackle_handle_request();
 }
-add_action('init', 'cackle_request_handler');
+add_action('wp_ajax_cackle_handle_request', 'cackle_request_handler');
 
-//Activation hooks
-require_once(dirname(__FILE__) . '/cackle_activate.php');
-register_activation_hook( __FILE__, 'cackle_activate' );
+register_activation_hook(__FILE__, 'cackle_activate');
