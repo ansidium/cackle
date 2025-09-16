@@ -71,10 +71,13 @@ class Cackle_Plugin {
         global $post;
         $post_identifier = $this->identifier_for_post($post);
 
+        // Strip markup (WordPress adds screen-reader spans) before exposing the count.
+        $plain_text = wp_strip_all_tags($comment_text, true);
+
         return sprintf(
             '<span class="cackle-postid" id="c%s">%s</span>',
             esc_attr($post_identifier),
-            esc_html($comment_text)
+            esc_html($plain_text)
         );
     }
 
