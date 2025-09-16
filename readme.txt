@@ -50,4 +50,4 @@ License URI: https://www.gnu.org/licenses/gpl-3.0.html
 - Исправлен расчет дат комментариев без устаревшего `strftime`.
 
 == Поддержка ==
-Форк развивается сообществом. Пожалуйста, создавайте issues и пул-реквесты в GitHub-репозитории: https://github.com/ansidium/cackle
+Форк развивается сообществом. Пожалуйста, создавайте issues и пул-реквесты в GitHub-репозитории: https://github.com/ansidium/wp-cackle
